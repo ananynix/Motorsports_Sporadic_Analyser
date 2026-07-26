@@ -1,0 +1,159 @@
+import { useEffect } from 'react'
+import { useStore } from './store/useStore'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import './App.css'
+
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    // Convert epoch to local time string (HH:mm:ss.SSS)
+    const date = new Date(label * 1000)
+    const timeStr = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}.${date.getMilliseconds().toString().padStart(3, '0')}`
+
+    return (
+      <div className="bg-[#222222dd] border border-[#E10600] p-3 rounded shadow-lg shadow-black/50">
+        <p className="text-[#888888] font-mono text-xs mb-2">{timeStr}</p>
+        {payload.map((pData: any, index: number) => (
+          <p key={index} style={{ color: pData.color }} className="font-bold text-sm m-0 leading-relaxed">
+            {pData.name} : {pData.value}
+          </p>
+        ))}
+      </div>
+    )
+  }
+  return null;
+}
+
+function App() {
+  const { liveTelemetry, fusedInsights, addTelemetry, addFusedInsight } = useStore()
+
+  useEffect(() => {
+    const ws = new WebSocket('ws://localhost:8000/ws/telemetry')
+
+    ws.onopen = () => {
+      console.log('WebSocket connected')
+    }
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data)
+        if (data.type === 'fused_insight') {
+          addFusedInsight(data.payload)
+        } else {
+          addTelemetry(data)
+        }
+      } catch (e) {
+        console.error('Error parsing WS message', e)
+      }
+    }
+
+    ws.onclose = () => {
+      console.log('WebSocket disconnected')
+    }
+
+    return () => {
+      ws.close()
+    }
+  }, [addTelemetry, addFusedInsight])
+
+  const simulateRadioTransmission = async () => {
+    try {
+      await fetch('http://localhost:8000/api/audio-event', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          start_ts: Date.now() / 1000 - 5,
+          end_ts: Date.now() / 1000,
+          mock_transcript: "I'm losing grip on the rears."
+        })
+      })
+      console.log('Simulated transmission sent.')
+    } catch (err) {
+      console.error('Failed to send transmission', err)
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-[#111111] text-[#FFFFFF] font-sans p-6 lg:p-8">
+      <header className="flex flex-col lg:flex-row justify-between items-center mb-8 pb-4 border-b border-[#333333]">
+        <h1 className="text-2xl lg:text-3xl font-bold tracking-tight mb-4 lg:mb-0">Real-Time Telemetry & Tactical Comm-Link Analyzer</h1>
+        <button 
+          onClick={simulateRadioTransmission} 
+          className="bg-[#E10600] text-white uppercase font-bold py-3 px-6 rounded transition-all hover:bg-[#ff1a12] hover:shadow-[0_0_15px_rgba(225,6,0,0.5)] active:scale-95"
+        >
+          Simulate Radio Transmission
+        </button>
+      </header>
+
+      <main className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Left Column: Live Telemetry */}
+        <section className="lg:col-span-2 bg-[#1A1A1A] border border-[#333333] rounded-lg p-6 shadow-lg shadow-black/50">
+          <h2 className="text-xl text-[#888888] mb-6 font-medium">Live Telemetry</h2>
+          
+          <div className="w-full h-64 mb-8 bg-[#111111] p-4 rounded border border-[#333333]">
+            <ResponsiveContainer>
+              <LineChart data={liveTelemetry}>
+                <CartesianGrid stroke="#333333" strokeDasharray="3 3" vertical={true} horizontal={true} />
+                <XAxis dataKey="ts" hide />
+                <YAxis yAxisId="left" stroke="#888888" tick={{ fill: '#888888', fontSize: 12 }} axisLine={false} tickLine={false} />
+                <YAxis yAxisId="right" orientation="right" stroke="#888888" tick={{ fill: '#888888', fontSize: 12 }} axisLine={false} tickLine={false} />
+                <Tooltip content={<CustomTooltip />} />
+                <Line yAxisId="left" type="monotone" dataKey="speed" stroke="#00D2BE" name="Speed (km/h)" strokeWidth={2} dot={false} activeDot={{ r: 4, strokeWidth: 0 }} isAnimationActive={false} />
+                <Line yAxisId="right" type="monotone" dataKey="rpm" stroke="#888888" name="RPM" strokeWidth={2} dot={false} activeDot={{ r: 4, strokeWidth: 0 }} isAnimationActive={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+          
+          <div className="w-full h-64 bg-[#111111] p-4 rounded border border-[#333333]">
+            <ResponsiveContainer>
+              <LineChart data={liveTelemetry}>
+                <CartesianGrid stroke="#333333" strokeDasharray="3 3" vertical={true} horizontal={true} />
+                <XAxis dataKey="ts" hide />
+                <YAxis stroke="#888888" tick={{ fill: '#888888', fontSize: 12 }} axisLine={false} tickLine={false} />
+                <Tooltip content={<CustomTooltip />} />
+                <Line type="monotone" dataKey="throttle" stroke="#FFF200" name="Throttle (%)" strokeWidth={2} dot={false} activeDot={{ r: 4, strokeWidth: 0 }} isAnimationActive={false} />
+                <Line type="monotone" dataKey="brake_pressure" stroke="#E10600" name="Brake (%)" strokeWidth={2} dot={false} activeDot={{ r: 4, strokeWidth: 0 }} isAnimationActive={false} />
+                <Line type="monotone" dataKey="tire_temp_fl" stroke="#e05252" name="Tire FL (°C)" strokeWidth={2} dot={false} activeDot={{ r: 4, strokeWidth: 0 }} isAnimationActive={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </section>
+
+        {/* Right Column: Tactical Insights Feed */}
+        <section className="bg-[#1A1A1A] border border-[#333333] rounded-lg p-6 shadow-lg shadow-black/50 flex flex-col h-[800px] lg:h-auto">
+          <h2 className="text-xl text-[#888888] mb-6 font-medium">Tactical Insights Feed</h2>
+          
+          <div className="flex-1 overflow-y-auto pr-2 space-y-4 feed-scrollbar h-full">
+            {fusedInsights.length === 0 ? (
+              <p className="text-[#888888] italic text-center mt-10">Waiting for tactical comms...</p>
+            ) : (
+              fusedInsights.map((insight, idx) => {
+                // Mock logic to determine if message is critical (e.g. grip, puncture)
+                const isCritical = insight.transcript.toLowerCase().includes('puncture') || insight.transcript.toLowerCase().includes('losing grip');
+                const borderColor = isCritical ? 'border-l-[#E10600]' : 'border-l-[#00D2BE]';
+                const insightColor = isCritical ? 'text-[#E10600]' : 'text-[#00D2BE]';
+                
+                return (
+                  <div key={idx} className={`bg-[#222222] p-4 rounded-r-md border-l-4 ${borderColor} shadow-md`}>
+                    <p className="mb-2 text-sm">
+                      <span className="text-[#888888] font-semibold mr-2">Transcript:</span>
+                      <span className="text-white italic">"{insight.transcript}"</span>
+                    </p>
+                    <p className="mb-3 text-sm">
+                      <span className="text-[#888888] font-semibold mr-2">Insight:</span>
+                      <span className={`font-bold ${insightColor}`}>{insight.insights}</span>
+                    </p>
+                    <p className="text-xs text-[#888888] font-mono opacity-60 mt-4 text-center">
+                      Time Window: {insight.start_ts.toFixed(1)}s - {insight.end_ts.toFixed(1)}s
+                    </p>
+                  </div>
+                )
+              })
+            )}
+          </div>
+        </section>
+      </main>
+    </div>
+  )
+}
+
+export default App

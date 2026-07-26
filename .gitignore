@@ -1,0 +1,9 @@
+node_modules/
+__pycache__/
+*.pyc
+venv/
+.env
+.DS_Store
+frontend/node_modules/
+backend/__pycache__/
+worker/__pycache__/
