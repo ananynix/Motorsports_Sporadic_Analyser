@@ -1,4 +1,4 @@
 redis
-transformers==4.40.0
+faster-whisper
 torch
 torchaudio

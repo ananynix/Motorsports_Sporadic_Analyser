@@ -7,7 +7,7 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'Roboto Mono', 'Orbitron', 'sans-serif'],
+        sans: ['"Titillium Web"', 'Inter', 'Roboto Mono', 'Orbitron', 'sans-serif'],
       },
       colors: {
         f1: {

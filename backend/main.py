@@ -7,7 +7,8 @@ from typing import Dict, Any, List
 
 from fusion_engine import fuse_data
 from redis_client import redis_client
-from mock_generator import DataGenerator
+from mock_generator import HistoricalGenerator
+import time
 
 class ConnectionManager:
     def __init__(self):
@@ -21,7 +22,6 @@ class ConnectionManager:
         self.active_connections.remove(websocket)
 
     async def broadcast(self, message: dict):
-        # We need to handle potential disconnects during broadcast
         for connection in self.active_connections:
             try:
                 await connection.send_json(message)
@@ -30,17 +30,24 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
-# This is our callback for the DataGenerator to send telemetry to WS
 async def broadcast_telemetry(payload: dict):
     await manager.broadcast(payload)
 
+async def broadcast_insight(payload: dict):
+    # Bypass NLP model: directly fuse the text transcript with the current telemetry window
+    start_ts = payload["timestamp"] - 5.0
+    end_ts = payload["timestamp"]
+    fused = fuse_data(start_ts, end_ts, payload["transcript"])
+    await manager.broadcast({"type": "fused_insight", "payload": fused})
+
 # Global generator
-generator = DataGenerator(publish_callback=broadcast_telemetry)
+generator = HistoricalGenerator(publish_callback=broadcast_telemetry, insight_callback=broadcast_insight)
 
 async def listen_to_redis():
     pubsub = redis_client.pubsub()
-    pubsub.subscribe("transcript_ready", "fused_insights")
+    pubsub.subscribe("transcript_ready")
     while True:
+
         message = pubsub.get_message(ignore_subscribe_messages=True)
         if message:
             channel = message["channel"]
@@ -48,7 +55,8 @@ async def listen_to_redis():
             
             if channel == "transcript_ready":
                 # We got a transcript from the worker, let's fuse it with telemetry
-                fused = fuse_data(data["start_ts"], data["end_ts"], data["transcript"])
+                recent_data = generator.history
+                fused = fuse_data(data["start_ts"], data["end_ts"], data["transcript"], recent_data)
                 # Broadcast directly to websocket
                 await manager.broadcast({"type": "fused_insight", "payload": fused})
                 # Optionally publish to redis
@@ -69,7 +77,17 @@ async def lifespan(app: FastAPI):
     # Shutdown
     await generator.stop()
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(title="Real-Time Telemetry & Tactical Comm-Link Analyzer", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class AudioEvent(BaseModel):
     start_ts: float
@@ -94,3 +112,8 @@ async def receive_audio_event(event: AudioEvent, background_tasks: BackgroundTas
     payload = event.model_dump()
     redis_client.publish("audio_events", json.dumps(payload))
     return {"status": "event_queued"}
+
+@app.get("/api/track-layout")
+async def get_track_layout():
+    # Return just the x, y coordinates to draw the track boundary
+    return [{"x": p["x"], "y": p["y"]} for p in generator.data_points]
