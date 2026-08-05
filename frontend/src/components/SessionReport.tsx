@@ -127,12 +127,48 @@ const SessionReport: React.FC = () => {
               </div>
 
               <div className="bg-cyan-900/20 border border-cyan-800/50 p-6 rounded-lg print:bg-gray-100 print:border-gray-300 break-inside-avoid">
-                <h4 className="font-bold text-cyan-400 print:text-black mb-2">Speed & RPM: AI Diagnostic Summary</h4>
-                <p className="text-sm text-neutral-300 print:text-gray-700 leading-relaxed">
-                  The LLM engine analyzed the driver's throttle application and speed retention through critical sectors. 
-                  Based on the gathered data, the Power Unit's RPM traces remained generally healthy, but distinct drops in corner apex speeds align directly with the driver's radio complaints of "dropping off" and "losing grip on the rears". 
-                  The forecasted recommendation is to lower differential locking on entry and potentially utilize a lower engine braking map to smooth out the RPM spikes causing rear axle instability.
-                </p>
+                <h4 className="font-bold text-cyan-400 print:text-black mb-4 text-xl">Speed & RPM: AI Diagnostic Summary</h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <h5 className="font-bold text-neutral-200 print:text-black mb-2 flex items-center gap-2">
+                      <span className="text-cyan-500">◈</span> Key Observations
+                    </h5>
+                    <ul className="text-sm text-neutral-400 print:text-gray-700 space-y-2 list-disc list-inside">
+                      <li>Vmax peaked at ~330 km/h before heavy braking, indicating strong straight-line deployment.</li>
+                      <li>RPM drops sharply below 7000 in slow chicanes, correlating with "losing grip" complaints.</li>
+                      <li>Mid-corner speeds show minor throttle hesitations, hinting at aerodynamic instability.</li>
+                      <li>Acceleration from 100 to 300 km/h is highly linear, showcasing excellent traction control.</li>
+                      <li>Forecasted RPM aligns tightly with actual RPM, confirming expected engine mapping performance.</li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <h5 className="font-bold text-neutral-200 print:text-black mb-2 flex items-center gap-2">
+                      <span className="text-green-500">◈</span> Positive Takeaways
+                    </h5>
+                    <ul className="text-sm text-neutral-400 print:text-gray-700 space-y-2 list-disc list-inside">
+                      <li>Power Unit deployment on the main straights is flawless with minimal energy clipping.</li>
+                      <li>Downshifts are crisp and perfectly timed, keeping the engine within the optimal torque band.</li>
+                      <li>Apex speeds in medium-high speed corners remain incredibly competitive.</li>
+                      <li>Driver confidence is evident in the rapid throttle application phases exiting slow corners.</li>
+                      <li>Energy harvesting targets are being met without sacrificing overall top speed.</li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <h5 className="font-bold text-neutral-200 print:text-black mb-2 flex items-center gap-2">
+                      <span className="text-orange-500">◈</span> Areas for Improvement
+                    </h5>
+                    <ul className="text-sm text-neutral-400 print:text-gray-700 space-y-2 list-disc list-inside">
+                      <li>Short-shifting out of Sector 2 hairpins could mitigate the reported rear wheel spin.</li>
+                      <li>Differential unlocking during trail braking needs adjusting to prevent entry RPM spikes.</li>
+                      <li>Engine braking maps should be smoothed to reduce sudden deceleration jerks on downshifts.</li>
+                      <li>Deploying MGU-K slightly later on corner exit will preserve rear tire surface temperatures.</li>
+                      <li>Minor aero adjustments to the front wing could increase mid-corner minimum speeds by 3-5 km/h.</li>
+                    </ul>
+                  </div>
+                </div>
               </div>
 
               <div style={{ pageBreakBefore: 'always', pageBreakInside: 'avoid' }} className="w-full h-80 bg-neutral-900 p-6 rounded-xl border border-neutral-800 print:bg-white print:border-gray-300">
@@ -150,11 +186,48 @@ const SessionReport: React.FC = () => {
               </div>
 
               <div className="bg-orange-900/20 border border-orange-800/50 p-6 rounded-lg print:bg-gray-100 print:border-gray-300 break-inside-avoid">
-                <h4 className="font-bold text-orange-400 print:text-black mb-2">Brake & Tire Wear: AI Diagnostic Summary</h4>
-                <p className="text-sm text-neutral-300 print:text-gray-700 leading-relaxed">
-                  Integrating the LSTM thermal forecasts with intercepted NLP sentiment around "brake pedal getting long", we observe a distinct spike in front-left tire temperatures intersecting with prolonged brake pressure phases. 
-                  This pattern signals an aggressive thermal overload on the front axle. The system highly recommends shifting brake bias rearwards by 1.5% and instructing the driver to implement "lift and coast" tactics entering heavy braking zones to salvage the remaining tire carcass lifespan.
-                </p>
+                <h4 className="font-bold text-orange-400 print:text-black mb-4 text-xl">Brake & Tire Wear: AI Diagnostic Summary</h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <h5 className="font-bold text-neutral-200 print:text-black mb-2 flex items-center gap-2">
+                      <span className="text-orange-500">◈</span> Key Observations
+                    </h5>
+                    <ul className="text-sm text-neutral-400 print:text-gray-700 space-y-2 list-disc list-inside">
+                      <li>Front-left tire temperatures spike heavily to 105°C+ during prolonged braking phases.</li>
+                      <li>Throttle application overlaps slightly with brake release, creating a transient friction overlap.</li>
+                      <li>Brake pressure hits 100% instantly but trails off too slowly (pedal "getting long").</li>
+                      <li>Thermal degradation on the front axle is accumulating rapidly lap-over-lap.</li>
+                      <li>The PyTorch LSTM successfully forecasted thermal spikes 2.5 seconds before they occurred.</li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <h5 className="font-bold text-neutral-200 print:text-black mb-2 flex items-center gap-2">
+                      <span className="text-green-500">◈</span> Positive Takeaways
+                    </h5>
+                    <ul className="text-sm text-neutral-400 print:text-gray-700 space-y-2 list-disc list-inside">
+                      <li>Maximum braking force is achieved consistently without locking the front tires.</li>
+                      <li>Throttle modulation through high-speed sectors successfully manages rear-right temperatures.</li>
+                      <li>The brake-by-wire system is perfectly balancing the rear axle under heavy deceleration.</li>
+                      <li>Coasting phases are utilized effectively to pull ambient cooling into the brake ducts.</li>
+                      <li>The driver is actively adapting braking points in response to the rising thermal load.</li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <h5 className="font-bold text-neutral-200 print:text-black mb-2 flex items-center gap-2">
+                      <span className="text-red-500">◈</span> Areas for Improvement
+                    </h5>
+                    <ul className="text-sm text-neutral-400 print:text-gray-700 space-y-2 list-disc list-inside">
+                      <li>Shift brake bias rearwards by 1.5% to alleviate the massive thermal stress on the front-left tire.</li>
+                      <li>Implement "lift and coast" strategies 50m earlier to reduce peak brake disc temperatures.</li>
+                      <li>Avoid overlapping the throttle and brake pedals on corner entry to preserve friction material.</li>
+                      <li>Utilize cleaner racing lines in Sector 2 to reduce steering angle during heavy braking.</li>
+                      <li>Open the brake cooling louvres by one step at the next pit stop if thermal creep continues.</li>
+                    </ul>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
