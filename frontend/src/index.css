@@ -17,3 +17,13 @@
     background: #555555; 
   }
 }
+
+@media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  @page {
+    margin: 1cm;
+  }
+}

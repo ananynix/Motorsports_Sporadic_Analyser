@@ -29,13 +29,24 @@ def extract_tactical_intent(transcript: str) -> dict:
         return json.loads(response.choices[0].message.content)
     except Exception as e:
         print(f"LLM API fallback due to: {e}")
-        # Fallback to simple rule-based intent
-        if "rear" in transcript.lower() or "graining" in transcript.lower() or "dropping" in transcript.lower():
+        # Diverse fallback rules mapped to the mock transcripts
+        text = transcript.lower()
+        if "dropping off" in text or "sector 2" in text:
+            return {"intent": "Tire Degradation", "severity": "High", "tactical_action": "Adjust differential for Sector 2"}
+        elif "rear" in text or "graining" in text:
             return {"intent": "Tire Degradation", "severity": "High", "tactical_action": "Brake earlier, manage rear slip"}
-        elif "brake" in transcript.lower():
-            return {"intent": "Brake Wear", "severity": "Medium", "tactical_action": "Shift brake bias forward"}
+        elif "front left" in text:
+            return {"intent": "Tire Graining", "severity": "Medium", "tactical_action": "Reduce front wing aero load"}
+        elif "brake pedal" in text:
+            return {"intent": "Brake Wear", "severity": "Medium", "tactical_action": "Shift brake bias forward, lift and coast"}
+        elif "box this lap" in text:
+            return {"intent": "Pit Stop", "severity": "High", "tactical_action": "Prepare for pit stop, box confirm"}
+        elif "engine temp" in text or "harvest" in text:
+            return {"intent": "Engine Overheating", "severity": "High", "tactical_action": "Increase lift and coast, open cooling louvres"}
+        elif "push now" in text:
+            return {"intent": "Overtake / Push", "severity": "Medium", "tactical_action": "Deploy maximum ERS, overtake mode"}
         else:
-            return {"intent": "General Check-in", "severity": "Low", "tactical_action": "Maintain pace"}
+            return {"intent": "General Check-in", "severity": "Low", "tactical_action": "Maintain pace, telemetry looks good"}
 
 def fuse_data(start_ts: float, end_ts: float, transcript: str, recent_data: list = None) -> dict:
     # 1. NLP Pipeline: Extract tactical intent
@@ -59,7 +70,7 @@ def fuse_data(start_ts: float, end_ts: float, transcript: str, recent_data: list
         "intent": intent_data["intent"],
         "severity": intent_data["severity"],
         "tactical_action": intent_data["tactical_action"],
-        "insights": f"NLP Analysis: {intent_data['tactical_action']}. DL Model forecasts shifted tire degradation trajectory.",
+        "insights": f"The race engineer recommends to {intent_data['tactical_action'].lower()} based on the driver's transcript. The Deep Learning model forecasts adjustments for {intent_data['intent']}.",
         "predicted_telemetry": predicted_telemetry
     }
     return fused_object

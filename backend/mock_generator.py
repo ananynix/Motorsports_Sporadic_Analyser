@@ -36,10 +36,16 @@ class HistoricalGenerator:
             if not self.data_points:
                 await asyncio.sleep(1)
                 continue
+            if self.current_idx >= len(self.data_points):
+                await redis_client.publish("audio_events", json.dumps({"type": "session_complete"})) # Just publish a dummy audio_event or handle it directly
+                # Wait, better to publish to a dedicated channel or directly via publish_callback so websocket picks it up.
+                await self.publish_callback({"type": "session_complete", "payload": "Session finished."})
+                self.running = False
+                break
                 
-            # Get current point and loop around if at the end
+            # Get current point
             point = self.data_points[self.current_idx]
-            self.current_idx = (self.current_idx + 1) % len(self.data_points)
+            self.current_idx += 1
             
             payload = {
                 "ts": time.time(),
@@ -68,23 +74,33 @@ class HistoricalGenerator:
     async def _generate_sporadic_audio(self, redis_client):
         # We publish to audio_events to test the worker STT pipeline
         transcripts = [
+            "I'm losing grip on the rears.",
             "Max: Tires are dropping off, no grip in sector 2.",
-            "Max: Brake pedal feels a bit long into turn 1.",
-            "GP: Copy Max, engine modes look good, keep pushing.",
-            "Max: I'm struggling with the rear on exit.",
-            "Max: Front left is graining, front left is graining."
+            "The car feels great, maintaining pace.",
+            "Front left is graining a bit, let's keep an eye on it.",
+            "Brake pedal is getting long.",
+            "Box this lap, box this lap.",
+            "Engine temp is a bit high, harvest on the straights.",
+            "Copy that, push now, push now."
         ]
         
         while self.running:
-            await asyncio.sleep(random.uniform(15.0, 35.0)) # Random interval between 15-35s
+            for transcript in transcripts:
+                if not self.running:
+                    break
+                
+                await asyncio.sleep(random.uniform(8.0, 12.0))
+                
+                # Send to worker via redis pubsub
+                payload = {
+                    "mock_transcript": transcript,
+                    "start_ts": time.time() - 5.0,
+                    "end_ts": time.time()
+                }
+                await redis_client.publish("audio_events", json.dumps(payload))
             
-            transcript = random.choice(transcripts)
-            
-            # Send to worker via redis pubsub
-            payload = {
-                "mock_transcript": transcript,
-                "start_ts": time.time() - 5.0,
-                "end_ts": time.time()
-            }
-            await redis_client.publish("audio_events", json.dumps(payload))
+            # If we exhausted the list but session is still running, optionally break or restart
+            # Given the data length, it should roughly align. If we reach here, we can stop emitting or loop again.
+            if not self.running:
+                break
 

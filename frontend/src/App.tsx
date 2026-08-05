@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useStore } from './store/useStore'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { TrackMap } from './components/TrackMap'
+import SessionReport from './components/SessionReport'
 import f1Logo from './assets/f1@logotyp.us.png'
 import './App.css'
 
@@ -25,7 +26,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 }
 
 function App() {
-  const { liveTelemetry, fusedInsights, addTelemetry, addFusedInsight, fetchTrackLayout } = useStore()
+  const { liveTelemetry, fusedInsights, isSessionOver, addTelemetry, addFusedInsight, setSessionOver, fetchTrackLayout } = useStore()
 
   useEffect(() => {
     fetchTrackLayout();
@@ -39,7 +40,9 @@ function App() {
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data)
-        if (data.type === 'fused_insight') {
+        if (data.type === 'session_complete') {
+          setSessionOver(true)
+        } else if (data.type === 'fused_insight') {
           addFusedInsight(data.payload)
         } else {
           addTelemetry(data)
@@ -56,23 +59,10 @@ function App() {
     return () => {
       ws.close()
     }
-  }, [addTelemetry, addFusedInsight])
+  }, [addTelemetry, addFusedInsight, setSessionOver])
 
-  const simulateRadioTransmission = async () => {
-    try {
-      await fetch('http://localhost:8000/api/audio-event', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          start_ts: Date.now() / 1000 - 5,
-          end_ts: Date.now() / 1000,
-          mock_transcript: "I'm losing grip on the rears."
-        })
-      })
-      console.log('Simulated transmission sent.')
-    } catch (err) {
-      console.error('Failed to send transmission', err)
-    }
+  if (isSessionOver) {
+    return <SessionReport />
   }
 
   return (
@@ -82,12 +72,6 @@ function App() {
           <img src={f1Logo} alt="F1 Logo" className="h-16 lg:h-20" />
           <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">Real-Time Telemetry & Tactical Comm-Link Analyzer</h1>
         </div>
-        <button 
-          onClick={simulateRadioTransmission} 
-          className="bg-[#E10600] text-white uppercase font-bold py-3 px-6 rounded transition-all hover:bg-[#ff1a12] hover:shadow-[0_0_15px_rgba(225,6,0,0.5)] active:scale-95"
-        >
-          Simulate Radio Transmission
-        </button>
       </header>
 
       <main className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -103,15 +87,15 @@ function App() {
 
             {/* Line Charts */}
             <div className="flex flex-col gap-6">
-              <div className="w-full h-64 bg-[#111111] p-4 rounded border border-[#333333]">
+              <div className="w-full h-80 bg-[#111111] p-4 rounded border border-[#333333] overflow-visible">
                 <h3 className="text-sm text-[#888888] mb-2 font-medium">Speed & RPM (Actual vs Predicted)</h3>
-                <ResponsiveContainer>
-                  <LineChart data={liveTelemetry}>
+                <ResponsiveContainer width="100%" height="90%">
+                  <LineChart data={liveTelemetry} margin={{ top: 10, right: 30, left: 10, bottom: 5 }}>
                     <CartesianGrid stroke="#333333" strokeDasharray="3 3" vertical={true} horizontal={true} />
                     <XAxis dataKey="ts" hide />
-                    <YAxis yAxisId="left" stroke="#888888" tick={{ fill: '#888888', fontSize: 12 }} axisLine={false} tickLine={false} />
-                    <YAxis yAxisId="right" orientation="right" stroke="#888888" tick={{ fill: '#888888', fontSize: 12 }} axisLine={false} tickLine={false} />
-                    <Tooltip content={<CustomTooltip />} />
+                    <YAxis yAxisId="left" stroke="#888888" tick={{ fill: '#888888', fontSize: 12 }} axisLine={false} tickLine={false} domain={[-10, 410]} />
+                    <YAxis yAxisId="right" orientation="right" stroke="#888888" tick={{ fill: '#888888', fontSize: 12 }} axisLine={false} tickLine={false} domain={['dataMin - 1000', 'dataMax + 1000']} />
+                    <Tooltip content={<CustomTooltip />} isAnimationActive={false} />
                     <Line yAxisId="left" type="monotone" dataKey="speed" stroke="#00D2BE" name="Speed (km/h)" strokeWidth={2} dot={false} isAnimationActive={false} />
                     <Line yAxisId="right" type="monotone" dataKey="rpm" stroke="#888888" name="RPM" strokeWidth={2} dot={false} isAnimationActive={false} />
                     {fusedInsights[0]?.predicted_telemetry && (
@@ -121,14 +105,14 @@ function App() {
                 </ResponsiveContainer>
               </div>
               
-              <div className="w-full h-64 bg-[#111111] p-4 rounded border border-[#333333]">
+              <div className="w-full h-80 bg-[#111111] p-4 rounded border border-[#333333] overflow-visible">
                 <h3 className="text-sm text-[#888888] mb-2 font-medium">Brake & Tire Deg (Actual vs Predicted)</h3>
-                <ResponsiveContainer>
-                  <LineChart data={liveTelemetry}>
+                <ResponsiveContainer width="100%" height="90%">
+                  <LineChart data={liveTelemetry} margin={{ top: 10, right: 30, left: 10, bottom: 5 }}>
                     <CartesianGrid stroke="#333333" strokeDasharray="3 3" vertical={true} horizontal={true} />
                     <XAxis dataKey="ts" hide />
-                    <YAxis stroke="#888888" tick={{ fill: '#888888', fontSize: 12 }} axisLine={false} tickLine={false} />
-                    <Tooltip content={<CustomTooltip />} />
+                    <YAxis stroke="#888888" tick={{ fill: '#888888', fontSize: 12 }} axisLine={false} tickLine={false} domain={[-5, 130]} />
+                    <Tooltip content={<CustomTooltip />} isAnimationActive={false} />
                     <Line type="monotone" dataKey="throttle" stroke="#FFF200" name="Throttle (%)" strokeWidth={2} dot={false} isAnimationActive={false} />
                     <Line type="monotone" dataKey="brake_pressure" stroke="#E10600" name="Brake (%)" strokeWidth={2} dot={false} isAnimationActive={false} />
                     <Line type="monotone" dataKey="tire_temp_fl" stroke="#e05252" name="Tire FL (°C)" strokeWidth={2} dot={false} isAnimationActive={false} />
@@ -146,7 +130,7 @@ function App() {
         </section>
 
         {/* Right Column: Tactical Insights Feed */}
-        <section className="bg-[#1A1A1A] border border-[#333333] rounded-lg p-6 shadow-lg shadow-black/50 flex flex-col h-[800px] lg:h-auto">
+        <section className="bg-[#1A1A1A] border border-[#333333] rounded-lg p-6 shadow-lg shadow-black/50 flex flex-col h-[500px] lg:h-[730px]">
           <h2 className="text-xl text-[#888888] mb-6 font-medium">Tactical Insights Feed</h2>
           
           <div className="flex-1 overflow-y-auto pr-2 space-y-4 feed-scrollbar h-full">

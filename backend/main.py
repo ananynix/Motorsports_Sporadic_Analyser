@@ -54,9 +54,11 @@ async def listen_to_redis():
             data = json.loads(message["data"])
             
             if channel == "transcript_ready":
+                if not data.get("transcript"):
+                    continue
                 # We got a transcript from the worker, let's fuse it with telemetry
                 recent_data = generator.history
-                fused = fuse_data(data["start_ts"], data["end_ts"], data["transcript"], recent_data)
+                fused = fuse_data(data.get("start_ts", 0), data.get("end_ts", 0), data["transcript"], recent_data)
                 # Broadcast directly to websocket
                 await manager.broadcast({"type": "fused_insight", "payload": fused})
                 # Optionally publish to redis
@@ -110,7 +112,7 @@ async def websocket_telemetry_endpoint(websocket: WebSocket):
 @app.post("/api/audio-event")
 async def receive_audio_event(event: AudioEvent, background_tasks: BackgroundTasks):
     payload = event.model_dump()
-    redis_client.publish("audio_events", json.dumps(payload))
+    await redis_client.publish("audio_events", json.dumps(payload))
     return {"status": "event_queued"}
 
 @app.get("/api/track-layout")
