@@ -3,12 +3,35 @@ version: '3.8'
 services:
   api:
     build: ./backend
+    restart: unless-stopped
     ports:
       - "8000:8000"
     depends_on:
       - redis
+    volumes:
+      # Read-only: the historical batch download (backend/download_historical_season.py)
+      # runs standalone on the host, not in this container -- this just lets
+      # the API serve what it already produced.
+      - ./data:/app/data:ro
+      # Read-write: without this, a checkpoint trained via `docker compose
+      # exec api python dl_model.py` lives only in the container's writable
+      # layer and is silently lost on the next `docker compose up --build`.
+      - ./backend/models:/app/models
     environment:
       - REDIS_URL=redis://redis:6379/0
+      # fusion_engine.py reads these; without them OPENAI_API_KEY is always
+      # unset inside the container and the LLM intent path can never run,
+      # silently falling back to the rule-based classifier every time.
+      # NOTE: default must be the non-empty sentinel "dummy_key", matching
+      # fusion_engine.py's own fallback check -- an empty string is still a
+      # "set" env var and makes the OpenAI SDK refuse to even construct a
+      # client, which previously crashed the whole api service on startup.
+      # Defaults point at Gemini's OpenAI-compatibility endpoint (see
+      # fusion_engine.py) rather than OpenAI's own API -- override both to
+      # switch providers.
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-dummy_key}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://generativelanguage.googleapis.com/v1beta/openai/}
+      - LLM_MODEL=${LLM_MODEL:-gemini-3.5-flash-lite}
     deploy:
       resources:
         reservations:
@@ -19,6 +42,7 @@ services:
 
   worker:
     build: ./worker
+    restart: unless-stopped
     depends_on:
       - redis
     environment:

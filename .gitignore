@@ -7,3 +7,16 @@ venv/
 frontend/node_modules/
 backend/__pycache__/
 worker/__pycache__/
+
+# FastF1's local telemetry cache -- gigabytes at full historical scale (see
+# the Phase 5 review); never belongs in git.
+fastf1_http_cache.sqlite
+/2023/
+/2024/
+/2025/
+/2026/
+.fastf1_cache/
+data/historical/
+
+# Trained model checkpoints -- generated artifacts, not source.
+backend/models/
